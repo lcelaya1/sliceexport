@@ -5,7 +5,6 @@
   "main": "code.js",
   "ui": "ui.html",
   "editorType": ["figma"],
-  "icon": "icon.png",
   "cover": "cover.png",
   "documentAccess": "dynamic-page",
   "networkAccess": {
