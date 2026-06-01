@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SliceExport</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 300px;
+    padding: 20px;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #ffffff;
+    color: #111111;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 2px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: #6B6B6B;
+    margin-bottom: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    color: #6B6B6B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .input-group { display: flex; flex-direction: column; }
+
+  input[type="number"] {
+    border: 1px solid #E5E5E5;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    width: 100%;
+    color: #111111;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus { border-color: #111111; }
+
+  .helper {
+    font-size: 12px;
+    color: #6B6B6B;
+    margin-top: 4px;
+  }
+
+  .error-inline {
+    font-size: 12px;
+    color: #EF4444;
+    margin-top: 4px;
+    min-height: 16px;
+  }
+
+  .btn {
+    background: #111111;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px;
+    width: 100%;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: background 0.15s;
+  }
+  .btn:hover:not(:disabled) { background: #333333; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Resolution segmented control */
+  .seg-label {
+    font-size: 11px;
+    color: #6B6B6B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    margin-top: 14px;
+    display: block;
+  }
+  .seg {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border: 1px solid #E5E5E5;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .seg input[type="radio"] { display: none; }
+  .seg label {
+    text-align: center;
+    padding: 7px 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: #6B6B6B;
+    background: #fff;
+    border-right: 1px solid #E5E5E5;
+    transition: background 0.12s, color 0.12s;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-bottom: 0;
+  }
+  .seg label:last-of-type { border-right: none; }
+  .seg input[type="radio"]:checked + label {
+    background: #111111;
+    color: #ffffff;
+  }
+  .seg-hint {
+    font-size: 11px;
+    color: #9B9B9B;
+    margin-top: 5px;
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: #111111;
+    border: 1px solid #E5E5E5;
+    border-radius: 6px;
+    padding: 10px;
+    width: 100%;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn-outline:hover:not(:disabled) { background: #F5F5F5; border-color: #D0D0D0; }
+  .btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .preview-status {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #6B6B6B;
+    margin-top: 10px;
+  }
+  .preview-status.visible { display: flex; }
+  .preview-dot-red  { width: 8px; height: 8px; border-radius: 50%; background: #FF3B30; flex-shrink: 0; }
+  .preview-dot-blue { width: 8px; height: 8px; border-radius: 50%; background: #007AFF; flex-shrink: 0; }
+  .btn-link {
+    background: none; border: none; padding: 0;
+    font-size: 12px; color: #6B6B6B; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 2px;
+  }
+  .btn-link:hover { color: #111111; }
+
+  .btn-secondary {
+    background: transparent;
+    color: #6B6B6B;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+    padding: 4px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .btn-secondary:hover { color: #111111; }
+
+  /* Progress */
+  .progress-label {
+    font-size: 13px;
+    color: #6B6B6B;
+    margin-top: 4px;
+    margin-bottom: 10px;
+  }
+
+  .progress-track {
+    height: 3px;
+    background: #E5E5E5;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 12px;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #111111;
+    border-radius: 99px;
+    transition: width 0.3s ease;
+  }
+
+  /* States */
+  .state { display: none; }
+  .state.active { display: block; }
+
+  .success-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .success-label {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .error-message {
+    font-size: 13px;
+    color: #EF4444;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+<!-- STATE: setup -->
+<div id="state-setup" class="state active">
+  <h1>SliceExport</h1>
+  <div class="subtitle" id="frame-subtitle">Loading frame…</div>
+
+  <div class="input-row">
+    <div class="input-group">
+      <label for="margin-top">Top margin</label>
+      <input type="number" id="margin-top" value="20" min="0" max="296" step="1" />
+      <span style="font-size:11px;color:#6B6B6B;margin-top:3px;">mm</span>
+    </div>
+    <div class="input-group">
+      <label for="margin-bottom">Bottom margin</label>
+      <input type="number" id="margin-bottom" value="20" min="0" max="296" step="1" />
+      <span style="font-size:11px;color:#6B6B6B;margin-top:3px;">mm</span>
+    </div>
+  </div>
+
+  <div class="helper" id="content-preview">Content area: 257mm per page</div>
+  <div class="error-inline" id="margin-error"></div>
+
+  <span class="seg-label">Resolution</span>
+  <div class="seg">
+    <input type="radio" name="scale" id="scale-2" value="2" />
+    <label for="scale-2">2× Draft</label>
+    <input type="radio" name="scale" id="scale-3" value="3" checked />
+    <label for="scale-3">3× Good</label>
+    <input type="radio" name="scale" id="scale-4" value="4" />
+    <label for="scale-4">4× Print</label>
+  </div>
+  <div class="seg-hint" id="scale-hint">~220 DPI · balanced quality and file size</div>
+
+  <button class="btn-outline" id="btn-preview" disabled>Preview Cuts</button>
+
+  <div class="preview-status" id="preview-status">
+    <span class="preview-dot-red"></span>
+    <span class="preview-dot-blue"></span>
+    <span id="preview-label"></span>
+    <button class="btn-link" id="btn-clear-preview">Clear</button>
+  </div>
+
+  <button class="btn" id="btn-export">Export PDF</button>
+</div>
+
+<!-- STATE: exporting -->
+<div id="state-exporting" class="state">
+  <h1>SliceExport</h1>
+  <div class="progress-label" id="export-label">Exporting page 1 of …</div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <button class="btn" id="btn-cancel" style="margin-top:20px;background:#ffffff;color:#111111;border:1px solid #E5E5E5;">Cancel</button>
+</div>
+
+<!-- STATE: ready (download) -->
+<div id="state-ready" class="state">
+  <h1>SliceExport</h1>
+  <div style="margin-top:12px;">
+    <div class="success-icon">✓</div>
+    <div class="success-label" id="ready-label">Pages exported</div>
+  </div>
+  <button class="btn" id="btn-download">Download PDF</button>
+  <button class="btn-secondary" id="btn-again">Export again</button>
+</div>
+
+<!-- STATE: error -->
+<div id="state-error" class="state">
+  <h1>SliceExport</h1>
+  <div style="margin-top:12px;" class="error-message" id="error-text"></div>
+  <button class="btn" id="btn-close">Close</button>
+</div>
+
+<script>
+(function () {
+  const MM_TO_PX = 3.7795;
+  const A4_H_MM = 297;
+
+  // State refs
+  const states = {
+    setup: document.getElementById('state-setup'),
+    exporting: document.getElementById('state-exporting'),
+    ready: document.getElementById('state-ready'),
+    error: document.getElementById('state-error'),
+  };
+
+  function showState(name) {
+    Object.values(states).forEach(el => el.classList.remove('active'));
+    states[name].classList.add('active');
+  }
+
+  // Elements
+  const frameSubtitle = document.getElementById('frame-subtitle');
+  const inputTop = document.getElementById('margin-top');
+  const inputBottom = document.getElementById('margin-bottom');
+  const contentPreview = document.getElementById('content-preview');
+  const marginError = document.getElementById('margin-error');
+  const btnExport = document.getElementById('btn-export');
+  const exportLabel = document.getElementById('export-label');
+  const progressFill = document.getElementById('progress-fill');
+  const btnCancel = document.getElementById('btn-cancel');
+  const readyLabel = document.getElementById('ready-label');
+  const btnDownload = document.getElementById('btn-download');
+  const btnAgain = document.getElementById('btn-again');
+  const errorText = document.getElementById('error-text');
+  const btnClose = document.getElementById('btn-close');
+  const btnPreview = document.getElementById('btn-preview');
+  const previewStatus = document.getElementById('preview-status');
+  const previewLabel = document.getElementById('preview-label');
+  const btnClearPreview = document.getElementById('btn-clear-preview');
+  const scaleInputs = document.querySelectorAll('input[name="scale"]');
+  const scaleHint = document.getElementById('scale-hint');
+
+  const scaleHints = {
+    2: '~190 DPI · fastest export, smaller file',
+    3: '~290 DPI · balanced quality and file size',
+    4: '~385 DPI · sharpest output, larger file',
+  };
+
+  function getScale() {
+    const checked = document.querySelector('input[name="scale"]:checked');
+    return checked ? parseInt(checked.value, 10) : 3;
+  }
+
+  scaleInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      scaleHint.textContent = scaleHints[getScale()] || '';
+    });
+  });
+
+  // Runtime state
+  let frameName = 'export';
+  let frameWidthPx = 794; // updated from frame-info; used for aspect-ratio-correct PDF placement
+  let slices = [];
+  let totalPages = 0;
+  let marginTopMm = 20;
+  let marginBottomMm = 20;
+  let pdfBlob = null;
+  let pendingDownload = false;
+
+  // --- Margin validation & live preview ---
+  function updateMarginPreview() {
+    const top = parseFloat(inputTop.value) || 0;
+    const bottom = parseFloat(inputBottom.value) || 0;
+    const content = A4_H_MM - top - bottom;
+    const invalid = top + bottom >= A4_H_MM;
+
+    if (invalid) {
+      marginError.textContent = 'Margins exceed page height';
+      btnExport.disabled = true;
+      btnPreview.disabled = true;
+      contentPreview.textContent = 'Content area: —';
+    } else {
+      marginError.textContent = '';
+      btnExport.disabled = false;
+      btnPreview.disabled = false;
+      contentPreview.textContent = `Content area: ${content.toFixed(1)}mm per page`;
+    }
+
+    // Hide stale preview status whenever margins change
+    previewStatus.classList.remove('visible');
+  }
+
+  inputTop.addEventListener('input', updateMarginPreview);
+  inputBottom.addEventListener('input', updateMarginPreview);
+  updateMarginPreview();
+
+  // --- Preview Cuts button ---
+  btnPreview.addEventListener('click', () => {
+    const top = parseFloat(inputTop.value) || 0;
+    const bottom = parseFloat(inputBottom.value) || 0;
+    if (top + bottom >= A4_H_MM) return;
+    previewStatus.classList.remove('visible');
+    parent.postMessage({ pluginMessage: { type: 'preview-cuts', marginTopMm: top, marginBottomMm: bottom } }, '*');
+  });
+
+  // --- Clear Preview button ---
+  btnClearPreview.addEventListener('click', () => {
+    parent.postMessage({ pluginMessage: { type: 'clear-preview' } }, '*');
+  });
+
+  // --- Export button ---
+  btnExport.addEventListener('click', () => {
+    marginTopMm = parseFloat(inputTop.value) || 0;
+    marginBottomMm = parseFloat(inputBottom.value) || 0;
+
+    if (marginTopMm + marginBottomMm >= A4_H_MM) return;
+
+    slices = [];
+    pdfBlob = null;
+    showState('exporting');
+    exportLabel.textContent = 'Starting export…';
+    progressFill.style.width = '0%';
+
+    parent.postMessage({ pluginMessage: { type: 'start-export', marginTopMm, marginBottomMm, scale: getScale() } }, '*');
+  });
+
+  // --- Cancel ---
+  btnCancel.addEventListener('click', () => {
+    parent.postMessage({ pluginMessage: { type: 'close' } }, '*');
+  });
+
+  // --- Download button ---
+  btnDownload.addEventListener('click', () => {
+    if (pdfBlob) {
+      triggerDownload(pdfBlob, frameName + '.pdf');
+    } else {
+      pendingDownload = true;
+    }
+  });
+
+  // --- Export again ---
+  btnAgain.addEventListener('click', () => {
+    slices = [];
+    pdfBlob = null;
+    previewStatus.classList.remove('visible');
+    showState('setup');
+  });
+
+  // --- Close (error state) ---
+  btnClose.addEventListener('click', () => {
+    parent.postMessage({ pluginMessage: { type: 'close' } }, '*');
+  });
+
+  // --- Convert Uint8Array → PNG data URL ---
+  function uint8ToDataUrl(bytes) {
+    return new Promise((resolve) => {
+      const blob = new Blob([bytes], { type: 'image/png' });
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // --- Flatten PNG onto a white canvas and return a JPEG data URL ---
+  // This strips any embedded ICC/P3 color profile and removes the alpha channel,
+  // so jsPDF renders colours exactly as they appear in the source PNG.
+  function pngToJpeg(pngDataUrl, quality = 0.97) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = pngDataUrl;
+    });
+  }
+
+  // --- Compose PDF from collected slices ---
+  async function composePdf() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    for (let i = 0; i < slices.length; i++) {
+      if (i > 0) pdf.addPage();
+
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, 210, 297, 'F');
+
+      const slice = slices[i];
+
+      // Aspect-ratio-correct height. Because code.ts computes contentHeightPx as
+      // contentHeightMm × (frameWidthPx / 210), this always equals contentHeightMm
+      // for full pages and proportionally less for the last (shorter) page.
+      const imgHeightMm = Math.round((slice.sliceHeightPx / frameWidthPx) * 210 * 100) / 100;
+
+      pdf.addImage(slice.dataUrl, 'JPEG', 0, marginTopMm, 210, imgHeightMm);
+    }
+
+    return pdf.output('blob');
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  // --- Message handler from plugin code ---
+  window.onmessage = async (event) => {
+    const msg = event.data.pluginMessage;
+    if (!msg) return;
+
+    if (msg.type === 'frame-info') {
+      frameName = msg.name;
+      frameWidthPx = msg.width;
+      frameSubtitle.textContent = `${msg.name} — ${msg.width}×${msg.height}px`;
+      btnPreview.disabled = false;
+      showState('setup');
+      return;
+    }
+
+    if (msg.type === 'preview-done') {
+      const n = msg.pageCount;
+      previewLabel.textContent = `${n} page${n !== 1 ? 's' : ''} shown in Figma`;
+      previewStatus.classList.add('visible');
+      return;
+    }
+
+    if (msg.type === 'preview-cleared') {
+      previewStatus.classList.remove('visible');
+      return;
+    }
+
+    if (msg.type === 'slice-ready') {
+      const { index, total, bytes, isLast, sliceHeightPx, contentHeightPx } = msg;
+      totalPages = total;
+
+      // Update progress UI
+      exportLabel.textContent = `Exporting page ${index + 1} of ${total}…`;
+      progressFill.style.width = `${((index + 1) / total) * 100}%`;
+
+      // Convert bytes → PNG data URL → JPEG (white background, no ICC profile)
+      const pngUrl  = await uint8ToDataUrl(bytes);
+      const dataUrl = await pngToJpeg(pngUrl);
+      slices[index] = { dataUrl, sliceHeightPx };
+
+      if (isLast) {
+        exportLabel.textContent = 'Composing PDF…';
+        progressFill.style.width = '100%';
+
+        try {
+          pdfBlob = await composePdf();
+        } catch (err) {
+          showState('error');
+          errorText.textContent = 'PDF composition failed: ' + err.message;
+          return;
+        }
+
+        readyLabel.textContent = `${total} page${total !== 1 ? 's' : ''} exported`;
+        showState('ready');
+
+        if (pendingDownload) {
+          pendingDownload = false;
+          triggerDownload(pdfBlob, frameName + '.pdf');
+        }
+      }
+      return;
+    }
+
+    if (msg.type === 'error') {
+      showState('error');
+      errorText.textContent = msg.message;
+      return;
+    }
+  };
+
+  // Signal plugin code that the UI is ready
+  parent.postMessage({ pluginMessage: { type: 'ready' } }, '*');
+})();
+</script>
+</body>
+</html>
