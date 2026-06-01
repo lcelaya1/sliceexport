@@ -5,7 +5,7 @@
   "main": "code.js",
   "ui": "ui.html",
   "editorType": ["figma"],
-  "cover": "cover.png",
+
   "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": ["https://cdnjs.cloudflare.com"]
