@@ -148,31 +148,6 @@ function findContentStartY(frame, fromY) {
         return fromY;
     return earliest === Infinity ? fromY : earliest;
 }
-// Returns the bottom Y of the last leaf element that starts before beforeY.
-// Used to trim trailing blank space from a slice when the cut falls in an
-// empty region inside a container frame.
-function findLastContentBefore(frame, beforeY) {
-    let latest = -1;
-    function search(node, absY) {
-        if (absY >= beforeY)
-            return;
-        const bottom = absY + getH(node);
-        if ('children' in node && node.children.length > 0) {
-            for (const child of node.children) {
-                search(child, absY + getY(child));
-            }
-        }
-        else {
-            // Leaf — clamp its bottom to beforeY
-            const effectiveBottom = Math.min(bottom, beforeY);
-            if (effectiveBottom > latest)
-                latest = effectiveBottom;
-        }
-    }
-    for (const child of frame.children)
-        search(child, getY(child));
-    return latest;
-}
 function computeSlices(frame, contentHeightPx) {
     const slices = [];
     let scanY = 0;
@@ -186,21 +161,10 @@ function computeSlices(frame, contentHeightPx) {
         const safeEnd = findSafeCutY(frame, rawEnd);
         const endY = safeEnd > sliceStartY + contentHeightPx * 0.1 ? safeEnd : rawEnd;
         const endYInt = Math.round(endY);
-        // Find where the next real content starts after the cut
-        const nextContentY = findContentStartY(frame, endYInt);
-        // If there is a significant gap after endYInt (trailing blank inside a
-        // container), trim the current slice to the last actual content so the
-        // blank doesn't appear as a huge white area at the bottom of the page.
-        const TRIM_THRESHOLD = 40; // px — only trim if gap is visually significant
-        let trimmedEnd = endYInt;
-        if (nextContentY > endYInt + TRIM_THRESHOLD) {
-            const lastContent = findLastContentBefore(frame, endYInt);
-            if (lastContent > sliceStartY && endYInt - lastContent > TRIM_THRESHOLD) {
-                trimmedEnd = lastContent;
-            }
-        }
-        slices.push({ startY: sliceStartY, endY: trimmedEnd });
-        scanY = nextContentY;
+        slices.push({ startY: sliceStartY, endY: endYInt });
+        // Advance past any inter-section whitespace so it falls at the bottom of
+        // the current page rather than the top of the next one.
+        scanY = findContentStartY(frame, endYInt);
         if (slices.length > 2000)
             break;
     }
