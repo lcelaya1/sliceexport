@@ -1,10 +1,14 @@
 {
   "name": "SliceExport",
-  "id": "sliceexport-plugin",
+  "id": "1643165321308252937",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
   "editorType": ["figma"],
   "icon": "icon.png",
-  "cover": "cover.png"
+  "cover": "cover.png",
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["https://cdnjs.cloudflare.com"]
+  }
 }
