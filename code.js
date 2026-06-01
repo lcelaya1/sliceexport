@@ -60,24 +60,44 @@ function findSafeCutY(frame, targetY) {
     }
     if (candidates.length)
         return Math.max(...candidates);
-    // Pass 2: no bottom-snap found — find an element that SPANS the cut line and
-    // whose top is within PUSH_TO_NEXT_PAGE_RANGE_PX above targetY. Snap the cut
-    // to just before its top so the whole element moves to the next page.
+    // Pass 2: no bottom-snap found — find an element that SPANS the cut line
+    // with actual content being cut (not blank space inside a container), and
+    // snap to its top so the whole element moves to the next page.
+    // Important: only snap when a CHILD of the container also spans the cut —
+    // if no child spans it the cut is in blank space inside the container,
+    // which is fine to cut through.
     let bestTop = -1;
     function findSpanningTop(node, absY) {
         const bottom = absY + getH(node);
         if (absY >= targetY || bottom <= targetY)
             return; // doesn't span cut
-        if (absY >= targetY - PUSH_TO_NEXT_PAGE_RANGE_PX) {
-            // Close enough — snap to this element's top
-            if (absY > bestTop)
-                bestTop = absY;
-            return; // don't recurse deeper; use the container boundary
-        }
-        // Element is too tall; recurse into children to find a tighter boundary
-        if ('children' in node) {
+        if ('children' in node && node.children.length > 0) {
+            // Check whether any child also spans the cut (= real content being cut)
+            let childSpansCut = false;
+            for (const child of node.children) {
+                const cY = absY + getY(child);
+                if (cY < targetY && cY + getH(child) > targetY) {
+                    childSpansCut = true;
+                    break;
+                }
+            }
+            if (!childSpansCut)
+                return; // cut is in blank space inside this container — ignore
+            if (absY >= targetY - PUSH_TO_NEXT_PAGE_RANGE_PX) {
+                // Container has real content being cut and is close enough — snap to its top
+                if (absY > bestTop)
+                    bestTop = absY;
+                return;
+            }
+            // Container is too tall; recurse to find a tighter child boundary
             for (const child of node.children) {
                 findSpanningTop(child, absY + getY(child));
+            }
+        }
+        else {
+            // Leaf node (image, text, shape) spans the cut
+            if (absY >= targetY - PUSH_TO_NEXT_PAGE_RANGE_PX && absY > bestTop) {
+                bestTop = absY;
             }
         }
     }
