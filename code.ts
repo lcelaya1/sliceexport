@@ -84,12 +84,12 @@ function findSafeCutY(frame: FrameNode, targetY: number): number {
 
       if (!childSpansCut) return; // cut is in blank space inside this container — ignore
 
-      if (absY >= targetY - PUSH_TO_NEXT_PAGE_RANGE_PX) {
-        // Container has real content being cut and is close enough — snap to its top
-        if (absY > bestTop) bestTop = absY;
-        return;
+      // Record this container as a candidate if it's within range, then ALWAYS
+      // recurse to find a tighter (higher) boundary inside it. bestTop keeps the
+      // maximum, so a child closer to targetY will override a distant parent.
+      if (absY >= targetY - PUSH_TO_NEXT_PAGE_RANGE_PX && absY > bestTop) {
+        bestTop = absY;
       }
-      // Container is too tall; recurse to find a tighter child boundary
       for (const child of (node as ChildrenMixin).children) {
         findSpanningTop(child, absY + getY(child));
       }
