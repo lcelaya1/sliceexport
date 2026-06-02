@@ -118,9 +118,8 @@ function findContentStartY(frame: FrameNode, fromY: number): number {
   let spanned = false;
 
   function search(node: SceneNode, absY: number): void {
-    if (spanned) return;
     const bottom = absY + getH(node);
-    if (bottom <= fromY) return; // entirely before cut, skip
+    if (bottom <= fromY) return; // entirely before cut
 
     if (absY >= fromY) {
       if (absY < earliest) earliest = absY;
@@ -129,25 +128,24 @@ function findContentStartY(frame: FrameNode, fromY: number): number {
 
     // Node spans the cut (absY < fromY < bottom)
     if ('children' in node && (node as ChildrenMixin).children.length > 0) {
-      // Container — recurse to find finer boundaries inside it
       for (const child of (node as ChildrenMixin).children) {
         search(child, absY + getY(child));
       }
     } else {
-      // Leaf node (text, image, shape) spans the cut — content is here, don't skip
+      // Leaf spans the cut — note it but keep searching siblings for earliest
       spanned = true;
     }
   }
 
+  // Always walk ALL top-level children so we never miss a sibling section
+  // that starts after fromY just because a leaf inside an earlier sibling
+  // triggered spanned=true.
   for (const child of frame.children) {
     search(child, getY(child));
-    if (spanned) break;
   }
 
-  // If fromY is inside a leaf element but the next content starts very close
-  // (within 2× snap range), it is almost certainly a nearby section start rather
-  // than content being cut through — skip to it so the gap doesn't show at the
-  // top of the next page.
+  // If fromY is inside a leaf but the next section starts close by (within 2×
+  // snap range), skip to it — it's a section boundary, not cut-through content.
   if (spanned && (earliest === Infinity || earliest - fromY >= LINE_SNAP_RANGE_PX * 2)) {
     return fromY;
   }
