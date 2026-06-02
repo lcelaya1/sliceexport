@@ -144,7 +144,13 @@ function findContentStartY(frame: FrameNode, fromY: number): number {
     if (spanned) break;
   }
 
-  if (spanned) return fromY;
+  // If fromY is inside a leaf element but the next content starts very close
+  // (within 2× snap range), it is almost certainly a nearby section start rather
+  // than content being cut through — skip to it so the gap doesn't show at the
+  // top of the next page.
+  if (spanned && (earliest === Infinity || earliest - fromY >= LINE_SNAP_RANGE_PX * 2)) {
+    return fromY;
+  }
   return earliest === Infinity ? fromY : earliest;
 }
 
