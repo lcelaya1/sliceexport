@@ -115,7 +115,8 @@ function findSafeCutY(frame: FrameNode, targetY: number): number {
 // skipped entirely.
 function findContentStartY(frame: FrameNode, fromY: number): number {
   let earliest = Infinity;
-  let spanned = false;
+  let spannedByShape = false; // a background shape (rect/ellipse/line) spans the cut
+  let spannedByContent = false; // actual content (text, vector, component…) spans the cut
 
   function search(node: SceneNode, absY: number): void {
     const bottom = absY + getH(node);
@@ -132,21 +133,28 @@ function findContentStartY(frame: FrameNode, fromY: number): number {
         search(child, absY + getY(child));
       }
     } else {
-      // Leaf spans the cut — note it but keep searching siblings for earliest
-      spanned = true;
+      // Leaf spans the cut — classify it
+      const type = (node as any).type as string;
+      if (type === 'RECTANGLE' || type === 'ELLIPSE' || type === 'LINE' || type === 'POLYGON' || type === 'STAR') {
+        spannedByShape = true; // likely a background decoration
+      } else {
+        spannedByContent = true; // text, vector, image, component — real content
+      }
     }
   }
 
-  // Always walk ALL top-level children so we never miss a sibling section
-  // that starts after fromY just because a leaf inside an earlier sibling
-  // triggered spanned=true.
   for (const child of frame.children) {
     search(child, getY(child));
   }
 
-  // If fromY is inside a leaf but the next section starts close by (within 2×
-  // snap range), skip to it — it's a section boundary, not cut-through content.
-  if (spanned && (earliest === Infinity || earliest - fromY >= LINE_SNAP_RANGE_PX * 2)) {
+  // Real content (text, etc.) is being cut — never skip forward, that would
+  // lose part of the element.
+  if (spannedByContent) return fromY;
+
+  // A background shape spans the cut. If the next section starts close by
+  // (within 2× snap range) it's a section boundary right after the decoration
+  // — skip the gap so it doesn't appear as extra margin at the top of the page.
+  if (spannedByShape && (earliest === Infinity || earliest - fromY >= LINE_SNAP_RANGE_PX * 2)) {
     return fromY;
   }
   return earliest === Infinity ? fromY : earliest;
